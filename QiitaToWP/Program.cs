@@ -26,6 +26,7 @@ namespace TestProject.QiitaToWP
             }
             catch (Exception err)
             {
+                Console.WriteLine("エラー終了");
                 Console.WriteLine(err.Message);
             }
             finally

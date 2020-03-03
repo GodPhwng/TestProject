@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -29,6 +30,11 @@ namespace TestProject.QiitaToWP
         private const string UPDATE_POSTS = "/wp-json/wp/v2/posts/{0}";
 
         /// <summary>
+        /// タグ取得、投稿時の定義
+        /// </summary>
+        private const string TAGS = "/wp-json/wp/v2/tags";
+
+        /// <summary>
         /// アプリケーションキー(Basic認証に使用するキー)
         /// </summary>
         private readonly string apllicationKey;
@@ -51,6 +57,32 @@ namespace TestProject.QiitaToWP
         {
             var body = await HpClient.GetStringAsync(TOP_URL + POSTS);
             return JArray.Parse(body);
+        }
+
+        /// <summary>
+        /// タグ一覧取得
+        /// </summary>
+        /// <param name="page">ページIndex</param>
+        /// <returns>返り値JSON配列</returns>
+        public async Task<JArray> GetTagList(int page = 1)
+        {
+            // 1ページ単位、100件取得
+            var responce = await HpClient.GetAsync($"{TOP_URL}{TAGS}?page={page}&per_page=100");
+
+            // 100件区切りした場合のトータルのページ
+            // 例えば201件ある場合、3ページとなる
+            var toalPage = responce.Headers.GetValues("X-WP-TotalPages").First();
+
+            var body = await responce.Content.ReadAsStringAsync();
+            var tagArray = JArray.Parse(body);
+
+            if (Convert.ToInt32(toalPage) > page)
+            {
+                // 再起処理 すべてのページのタグを収集
+                tagArray.Merge(await this.GetTagList(++page));
+            }
+
+            return tagArray;
         }
 
         /// <summary>
@@ -105,6 +137,36 @@ namespace TestProject.QiitaToWP
                 Console.WriteLine(resultJson["message"].ToString());
 
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// タグ追加
+        /// </summary>
+        /// <param name="json">タグ情報JSON</param>
+        /// <returns>作成したタグのID</returns>
+        public async Task<int?> InsertTag(object json)
+        {
+            var request = this.CreateHttpRequestMessage(HttpMethod.Post, TOP_URL + TAGS);
+            request.Content = new StringContent(JsonConvert.SerializeObject(json), Encoding.UTF8, "application/json");
+
+            // リクエスト
+            var result = await HpClient.SendAsync(request);
+
+            // レスポンスbody
+            var resultJson = JObject.Parse(result.Content.ReadAsStringAsync().Result);
+
+            if (result.StatusCode == HttpStatusCode.Created)
+            {
+                // 追加したタグのIDを返却
+                return resultJson["id"].Value<int>();
+            }
+            else
+            {
+                // エラーメッセージ
+                Console.WriteLine(resultJson["message"].ToString());
+
+                return null;
             }
         }
 
