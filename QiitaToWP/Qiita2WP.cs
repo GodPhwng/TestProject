@@ -31,8 +31,8 @@ namespace TestProject.QiitaToWP
             foreach (var qiita in qiitaList)
             {                
                 var url = qiita["url"].ToString();
-                var title = qiita["title"].ToString();
-                
+                var title = qiita["title"].ToString();                                
+
                 // リクエストBody作成
                 var json = new
                 {
@@ -48,8 +48,8 @@ namespace TestProject.QiitaToWP
                     // 本文
                     content = $"\n<p>{title}<a href=\"{url}\">{url}</a></p>\n",
 
-                    // タグ
-                    tags = this.GetAndAddTagList(wpService, qiita, tagList)
+                    // タグ(インサート処理は非同期で実行し、すべての処理が終わるのを待つ)
+                    tags = await Task.WhenAll(qiita["tags"].Select(async q => await this.GetAndAddTagListAsync(wpService, q, tagList)))
                 };
 
                 // Qiitaの記事URLが含まれる物を取得
@@ -69,32 +69,29 @@ namespace TestProject.QiitaToWP
         }
 
         /// <summary>
-        /// Qiitaタグと同一のWordPressタグID一覧を取得
-        /// WordPress側に存在しない場合は、新規追加も同時に行う
+        /// Qiitaタグと同一のWordPressタグIDを取得
+        /// WordPress側に存在しない場合は、新規追加を行う
         /// </summary>
         /// <param name="wpService">WPService</param>
-        /// <param name="qiitaArticle">Qiita記事</param>
+        /// <param name="tag">Qiitaタグ</param>
         /// <param name="wpTagList">WordPressタグ一覧</param>
-        /// <returns>Qiitaタグと同一のWordPressタグID一覧</returns>
-        private IEnumerable<int> GetAndAddTagList(WPService wpService, JToken qiitaArticle, JArray wpTagList)
-        {            
-            foreach (var tag in qiitaArticle["tags"])
+        /// <returns>Qiitaタグと同一のWordPressタグID</returns>
+        private async Task<int> GetAndAddTagListAsync(WPService wpService, JToken tag, JArray wpTagList)
+        {
+            var findTag = wpTagList.FirstOrDefault(wpt => wpt["name"].ToString() == tag["name"].ToString());
+            if (findTag == null)
             {
-                var findTag = wpTagList.FirstOrDefault(wpt => wpt["name"].ToString() == tag["name"].ToString());
-                if (findTag == null)
-                {
-                    // Tag追加リクエスト(同期リクエスト)
-                    var id = wpService.InsertTag(new { name = tag["name"].ToString() }).Result;
+                // Tag追加リクエスト(同期リクエスト)
+                var id = await wpService.InsertTag(new { name = tag["name"].ToString() });
 
-                    // リストに追加
-                    wpTagList.Add(JToken.FromObject(new { id = id ?? -1, name = tag["name"].ToString() }));
+                // リストに追加
+                wpTagList.Add(JToken.FromObject(new { id = id ?? -1, name = tag["name"].ToString() }));
 
-                    yield return id ?? -1;
-                }
-                else
-                {
-                    yield return findTag["id"].Value<int>();
-                }
+                return id ?? -1;
+            }
+            else
+            {
+                return findTag["id"].Value<int>();
             }
         }
     }
