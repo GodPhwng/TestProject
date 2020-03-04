@@ -17,7 +17,7 @@ namespace TestProject.GoogleAPITest
             try
             {
                 // カレンダーID
-                var calendarId = "カレンダーID";
+                var calendarId = "god_tuyosi@yahoo.co.jp";
 
                 // Googleカレンダーテストクラスインスタンス化
                 var calApi = new CalendarAPITest(@"C:\job\TestProject\GoogleAPITest\testproject-269217-813bf9be17a5.json");

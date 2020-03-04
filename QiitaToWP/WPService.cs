@@ -106,7 +106,7 @@ namespace TestProject.QiitaToWP
             else
             {
                 // エラーメッセージ
-                var resultJson = JObject.Parse(result.Content.ReadAsStringAsync().Result);
+                var resultJson = JObject.Parse(await result.Content.ReadAsStringAsync());
                 Console.WriteLine(resultJson["message"].ToString());
 
                 return false;
@@ -133,7 +133,7 @@ namespace TestProject.QiitaToWP
             else
             {
                 // エラーメッセージ
-                var resultJson = JObject.Parse(result.Content.ReadAsStringAsync().Result);
+                var resultJson = JObject.Parse(await result.Content.ReadAsStringAsync());
                 Console.WriteLine(resultJson["message"].ToString());
 
                 return false;
@@ -154,7 +154,7 @@ namespace TestProject.QiitaToWP
             var result = await HpClient.SendAsync(request);
 
             // レスポンスbody
-            var resultJson = JObject.Parse(result.Content.ReadAsStringAsync().Result);
+            var resultJson = JObject.Parse(await result.Content.ReadAsStringAsync());
 
             if (result.StatusCode == HttpStatusCode.Created)
             {
