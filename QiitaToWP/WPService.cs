@@ -55,8 +55,7 @@ namespace TestProject.QiitaToWP
         /// <returns>返り値JSON配列</returns>
         public override async Task<JArray> GetArticleList(params string[] param)
         {
-            var body = await HpClient.GetStringAsync(TOP_URL + POSTS);
-            return JArray.Parse(body);
+            return await this.GetList(POSTS);
         }
 
         /// <summary>
@@ -64,10 +63,21 @@ namespace TestProject.QiitaToWP
         /// </summary>
         /// <param name="page">ページIndex</param>
         /// <returns>返り値JSON配列</returns>
-        public async Task<JArray> GetTagList(int page = 1)
+        public async Task<JArray> GetTagList()
+        {
+            return await this.GetList(TAGS);
+        }
+
+        /// <summary>
+        /// 指定された要素すべてを取得
+        /// </summary>
+        /// <param name="url">要素のURL</param>
+        /// <param name="page">ページIndex</param>
+        /// <returns>返り値JSON配列</returns>
+        private async Task<JArray> GetList(string url, int page = 1)
         {
             // 1ページ単位、100件取得
-            var responce = await HpClient.GetAsync($"{TOP_URL}{TAGS}?page={page}&per_page=100");
+            var responce = await HpClient.GetAsync($"{TOP_URL}{url}?page={page}&per_page=100");
 
             // 100件区切りした場合のトータルのページ
             // 例えば201件ある場合、3ページとなる
@@ -78,8 +88,8 @@ namespace TestProject.QiitaToWP
 
             if (Convert.ToInt32(toalPage) > page)
             {
-                // 再起処理 すべてのページのタグを収集
-                tagArray.Merge(await this.GetTagList(++page));
+                // 再起処理 すべてのページの要素を収集
+                tagArray.Merge(await this.GetList(url, ++page));
             }
 
             return tagArray;
